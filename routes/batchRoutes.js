@@ -3,8 +3,7 @@ const router = express.Router();
 const Batch = require("../models/Batch");
 const { protect } = require("../middleware/authMiddleware");
 
-// @route   GET /api/batches
-// @desc    Get all batches
+// Get all batches
 router.get("/", async (req, res) => {
     try {
         const batches = await Batch.find().sort({ createdAt: -1 });
@@ -14,8 +13,7 @@ router.get("/", async (req, res) => {
     }
 });
 
-// @route   GET /api/batches/:id
-// @desc    Get batch by ID
+// Get batch by ID
 router.get("/:id", async (req, res) => {
     try {
         const batch = await Batch.findById(req.params.id);
@@ -28,25 +26,30 @@ router.get("/:id", async (req, res) => {
     }
 });
 
-// @route   POST /api/batches
-// @desc    Create a new batch (protected)
+// Create a batch
 router.post("/", protect, async (req, res) => {
     try {
-        const { productId, batchNumber, manufactureDate, expiryDate } = req.body;
+        const { productId, batchNumber, manufactureDate, expiryDate, quantity } = req.body;
+
+        if (!quantity || quantity <= 0) {
+            return res.status(400).json({ message: "Quantity is required and must be greater than 0" });
+        }
+
         const batch = await Batch.create({
             productId,
             batchNumber,
             manufactureDate,
             expiryDate,
+            quantity, // <-- important!
         });
+
         res.status(201).json(batch);
     } catch (error) {
         res.status(500).json({ message: "Server error", error: error.message });
     }
 });
 
-// @route   PUT /api/batches/:id
-// @desc    Update a batch (protected)
+// Update batch
 router.put("/:id", protect, async (req, res) => {
     try {
         const updatedBatch = await Batch.findByIdAndUpdate(
@@ -63,8 +66,7 @@ router.put("/:id", protect, async (req, res) => {
     }
 });
 
-// @route   DELETE /api/batches/:id
-// @desc    Delete a batch (protected)
+// Delete batch
 router.delete("/:id", protect, async (req, res) => {
     try {
         const batch = await Batch.findById(req.params.id);

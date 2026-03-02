@@ -3,8 +3,7 @@ const router = express.Router();
 const Product = require("../models/Product");
 const { protect } = require("../middleware/authMiddleware");
 
-// @route   GET /api/products
-// @desc    Get all products
+
 router.get("/", async (req, res) => {
     try {
         const products = await Product.find().sort({ createdAt: -1 });
@@ -14,8 +13,6 @@ router.get("/", async (req, res) => {
     }
 });
 
-// @route   GET /api/products/:id
-// @desc    Get single product by ID
 router.get("/:id", async (req, res) => {
     try {
         const product = await Product.findById(req.params.id);
@@ -28,8 +25,6 @@ router.get("/:id", async (req, res) => {
     }
 });
 
-// @route   POST /api/products
-// @desc    Create a product (protected)
 router.post("/", protect, async (req, res) => {
     try {
         const { name, slug, description, storage, packaging, images } = req.body;
@@ -49,8 +44,6 @@ router.post("/", protect, async (req, res) => {
     }
 });
 
-// @route   PUT /api/products/:id
-// @desc    Update a product (protected)
 router.put("/:id", protect, async (req, res) => {
     try {
         const product = await Product.findById(req.params.id);
@@ -70,8 +63,6 @@ router.put("/:id", protect, async (req, res) => {
     }
 });
 
-// @route   DELETE /api/products/:id
-// @desc    Delete a product (protected)
 router.delete("/:id", protect, async (req, res) => {
     try {
         const product = await Product.findById(req.params.id);
