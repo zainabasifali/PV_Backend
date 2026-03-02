@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const Product = require("../models/Product");
 const { protect } = require("../middleware/authMiddleware");
+const upload = require("../middleware/uploadMiddleware");
 
 
 router.get("/", async (req, res) => {
@@ -25,9 +26,14 @@ router.get("/:id", async (req, res) => {
     }
 });
 
-router.post("/", protect, async (req, res) => {
+router.post("/", protect, upload.array("images", 5), async (req, res) => {
     try {
-        const { name, slug, description, storage, packaging, images } = req.body;
+        const { name, slug, description, storage, packaging } = req.body;
+
+        let images = [];
+        if (req.files && req.files.length > 0) {
+            images = req.files.map(file => `/uploads/${file.filename}`);
+        }
 
         const product = await Product.create({
             name,
@@ -44,16 +50,26 @@ router.post("/", protect, async (req, res) => {
     }
 });
 
-router.put("/:id", protect, async (req, res) => {
+router.put("/:id", protect, upload.array("images", 5), async (req, res) => {
     try {
         const product = await Product.findById(req.params.id);
         if (!product) {
             return res.status(404).json({ message: "Product not found" });
         }
 
+        let updateData = { ...req.body };
+
+        if (req.files && req.files.length > 0) {
+            const newImages = req.files.map(file => `/uploads/${file.filename}`);
+            // If the user wants to append images or replace them? 
+            // Usually, replacement is safer unless specified.
+            // Let's assume replacement for now or append if images field is missing.
+            updateData.images = newImages;
+        }
+
         const updatedProduct = await Product.findByIdAndUpdate(
             req.params.id,
-            req.body,
+            updateData,
             { new: true, runValidators: true }
         );
 
