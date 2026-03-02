@@ -12,6 +12,13 @@ connectDB();
 app.use(cors());
 app.use(express.json());
 
+// Routes
+const adminRoutes = require("./routes/adminRoutes");
+const productRoutes = require("./routes/productRoutes");
+
+app.use("/api/admin", adminRoutes);
+app.use("/api/products", productRoutes);
+
 app.get("/", (req, res) => {
   res.send("Pharmacy API is running...");
 });
