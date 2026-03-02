@@ -18,6 +18,8 @@ const productRoutes = require("./routes/productRoutes");
 
 app.use("/api/admin", adminRoutes);
 app.use("/api/products", productRoutes);
+const batchRoutes = require("./routes/batchRoutes");
+app.use("/api/batches", batchRoutes);
 
 app.get("/", (req, res) => {
   res.send("Pharmacy API is running...");
