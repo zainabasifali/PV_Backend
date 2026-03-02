@@ -18,11 +18,13 @@ const adminRoutes = require("./routes/adminRoutes");
 const productRoutes = require("./routes/productRoutes");
 const batchRoutes = require("./routes/batchRoutes");
 const coaRoutes = require("./routes/coaRoutes");
+const qrCodeRoutes = require("./routes/qrCodeRoutes");
 
 app.use("/api/admin", adminRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/batches", batchRoutes);
 app.use("/api/coa", coaRoutes);
+app.use("/api/qrcodes", qrCodeRoutes);
 
 app.get("/", (req, res) => {
   res.send("Pharmacy API is running...");
