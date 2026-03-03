@@ -6,6 +6,7 @@ const COA = require("../models/COA");
 const { protect } = require("../middleware/authMiddleware");
 const { v4: uuidv4 } = require("uuid");
 const QRCode = require("qrcode"); 
+const { Parser } = require("json2csv");
 
 router.get("/", protect, async (req, res) => {
     try {
@@ -83,6 +84,37 @@ router.delete("/:id", protect, async (req, res) => {
         await QRCodeModel.findByIdAndDelete(req.params.id);
         res.json({ message: "QR code deleted successfully" });
     } catch (error) {
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+});
+
+router.get("/export/:batchId", protect, async (req, res) => {
+    try {
+        const { batchId } = req.params;
+
+        res.setHeader("Content-Type", "text/csv");
+        res.setHeader(
+            "Content-Disposition",
+            `attachment; filename="batch_${batchId}_qrcodes.csv"`
+        );
+
+        const cursor = QRCodeModel.find({ batchId }).cursor();
+
+        const json2csv = new Transform({ fields: ["qrCode"] });
+
+        cursor.pipe(json2csv).pipe(res);
+
+        cursor.on("end", () => {
+            console.log(`CSV streaming completed for batch ${batchId}`);
+        });
+
+        cursor.on("error", (err) => {
+            console.error("Cursor error:", err);
+            res.status(500).end("Server error during CSV export");
+        });
+
+    } catch (error) {
+        console.error(error);
         res.status(500).json({ message: "Server error", error: error.message });
     }
 });
