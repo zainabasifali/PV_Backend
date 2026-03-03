@@ -6,7 +6,7 @@ const COA = require("../models/COA");
 const { protect } = require("../middleware/authMiddleware");
 const { v4: uuidv4 } = require("uuid");
 const QRCode = require("qrcode"); 
-const { Parser } = require("json2csv");
+const { Transform } = require("json2csv"); 
 
 router.get("/", protect, async (req, res) => {
     try {
