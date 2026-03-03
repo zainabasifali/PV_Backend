@@ -25,7 +25,7 @@ router.get("/:id", async (req, res) => {
     }
 });
 
-router.post("/", upload.single("file"), async (req, res) => {
+router.post("/", protect, upload.single("file"), async (req, res) => {
     try {
         const { batchId, labName, purity } = req.body;
         console.log("Received COA data:", { batchId, labName, purity });

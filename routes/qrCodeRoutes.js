@@ -5,9 +5,8 @@ const Batch = require("../models/Batch");
 const COA = require("../models/COA");
 const { protect } = require("../middleware/authMiddleware");
 const { v4: uuidv4 } = require("uuid");
-const QRCode = require("qrcode"); // optional for image generation
+const QRCode = require("qrcode"); 
 
-// Get all QR codes
 router.get("/", protect, async (req, res) => {
     try {
         const qrCodes = await QRCodeModel.find()
@@ -19,7 +18,6 @@ router.get("/", protect, async (req, res) => {
     }
 });
 
-// Get QR code by ID
 router.get("/:id", protect, async (req, res) => {
     try {
         const qrCode = await QRCodeModel.findById(req.params.id)
@@ -33,32 +31,24 @@ router.get("/:id", protect, async (req, res) => {
     }
 });
 
-// Generate QR codes for a batch
 router.post("/generate/:batchId", protect, async (req, res) => {
     try {
         const { batchId } = req.params;
 
-        // 1️⃣ Find the batch
         const batch = await Batch.findById(batchId);
         if (!batch) return res.status(404).json({ message: "Batch not found" });
 
-        // 2️⃣ Check COA exists
         const coa = await COA.findOne({ batchId: batch._id });
         if (!coa) return res.status(400).json({ message: "Upload COA before generating QR codes" });
 
-        // 3️⃣ Check if QR codes already generated
         const existing = await QRCodeModel.find({ batchId: batch._id });
         if (existing.length > 0) {
             return res.status(400).json({ message: "QR codes already generated for this batch" });
         }
 
-        // 4️⃣ Generate QR codes for each unit in batch
         const qrCodesArray = [];
         for (let i = 0; i < batch.quantity; i++) {
-            const uniqueCode = uuidv4(); // unique QR string
-
-            // Optional: generate QR code image
-            // const qrImage = await QRCode.toDataURL(uniqueCode);
+            const uniqueCode = uuidv4(); 
 
             qrCodesArray.push({
                 batchId: batch._id,
@@ -70,7 +60,6 @@ router.post("/generate/:batchId", protect, async (req, res) => {
             });
         }
 
-        // 5️⃣ Save all QR codes to DB
         const createdQRCodes = await QRCodeModel.insertMany(qrCodesArray);
 
         res.status(201).json({
@@ -84,7 +73,6 @@ router.post("/generate/:batchId", protect, async (req, res) => {
     }
 });
 
-// Delete a QR code by ID
 router.delete("/:id", protect, async (req, res) => {
     try {
         const qrCode = await QRCodeModel.findById(req.params.id);
