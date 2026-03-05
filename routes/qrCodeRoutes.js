@@ -131,18 +131,22 @@ router.post("/scan", async (req, res) => {
             .populate("batchId");
 
         if (!qrCodeDoc) {
-            return res.status(404).json({ message: "invalid qrcode" });
+            return res.status(404).json({ message: "Invalid qrcode", status: "Invalid" });
         }
+
+        const previousScanCount = qrCodeDoc.scanCount;
 
         qrCodeDoc.scanCount += 1;
         qrCodeDoc.status = "used";
         await qrCodeDoc.save();
 
+        const verificationStatus = previousScanCount === 0 ? "Verified" : "Already verified";
+
         res.json({
             message: "QR code scanned successfully",
+            status: verificationStatus,
             coaFile: qrCodeDoc.coaId ? qrCodeDoc.coaId.fileUrl : null,
             product: qrCodeDoc.productId,
-            batch: qrCodeDoc.batchId,
             scanCount: qrCodeDoc.scanCount
         });
 

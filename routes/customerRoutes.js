@@ -3,9 +3,7 @@ const router = express.Router();
 const Customer = require("../models/Customer");
 const { protect } = require("../middleware/authMiddleware");
 
-// @desc    Get all customers
-// @route   GET /api/customers
-// @access  Private
+
 router.get("/", protect, async (req, res) => {
     try {
         const customers = await Customer.find().sort({ createdAt: -1 });
@@ -15,9 +13,6 @@ router.get("/", protect, async (req, res) => {
     }
 });
 
-// @desc    Get single customer
-// @route   GET /api/customers/:id
-// @access  Private
 router.get("/:id", protect, async (req, res) => {
     try {
         const customer = await Customer.findById(req.params.id);
@@ -28,9 +23,6 @@ router.get("/:id", protect, async (req, res) => {
     }
 });
 
-// @desc    Create a customer
-// @route   POST /api/customers
-// @access  Private
 router.post("/", protect, async (req, res) => {
     try {
         const { name, email, phoneNumber, city } = req.body;
@@ -49,9 +41,6 @@ router.post("/", protect, async (req, res) => {
     }
 });
 
-// @desc    Update a customer
-// @route   PUT /api/customers/:id
-// @access  Private
 router.put("/:id", protect, async (req, res) => {
     try {
         const { name, email, phoneNumber, city } = req.body;
@@ -70,9 +59,6 @@ router.put("/:id", protect, async (req, res) => {
     }
 });
 
-// @desc    Delete a customer
-// @route   DELETE /api/customers/:id
-// @access  Private
 router.delete("/:id", protect, async (req, res) => {
     try {
         const customer = await Customer.findById(req.params.id);

@@ -37,8 +37,6 @@ router.get("/:id", async (req, res) => {
 router.post("/", protect, upload.array("images", 5), async (req, res) => {
     try {
         const { name, slug, description, storage, packaging } = req.body;
-        console.log(req.body)
-        // Validation
         if (!name || !slug) {
             return res.status(400).json({ message: "Name and slug are required" });
         }
@@ -88,7 +86,6 @@ router.put("/:id", protect, upload.array("images", 5), async (req, res) => {
 
         const { name, slug } = req.body;
 
-        // If updating slug, check if it's already taken
         if (slug && slug !== product.slug) {
             const productExists = await Product.findOne({ slug });
             if (productExists) {
@@ -129,21 +126,15 @@ router.delete("/:id", protect, async (req, res) => {
             return res.status(404).json({ message: "Product not found" });
         }
 
-        // Cascade delete: Batches, COAs, and QRCodes
-        // 1. Find all batches for this product to get their IDs
         const batches = await Batch.find({ productId: req.params.id });
         const batchIds = batches.map(b => b._id);
 
-        // 2. Delete all QRCodes linked to this product
         await QRCodeModel.deleteMany({ productId: req.params.id });
 
-        // 3. Delete all COAs linked to these batches
         await COA.deleteMany({ batchId: { $in: batchIds } });
 
-        // 4. Delete all Batches linked to this product
         await Batch.deleteMany({ productId: req.params.id });
 
-        // 5. Finally delete the product itself
         await Product.findByIdAndDelete(req.params.id);
 
         res.json({ message: "Product and all related data deleted successfully" });
