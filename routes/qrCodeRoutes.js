@@ -119,7 +119,7 @@ router.get("/export/:batchId", protect, async (req, res) => {
 
 router.post("/scan", async (req, res) => {
     try {
-        const { qrCode } = req.body;
+        const { qrCode, batchId } = req.body;
 
         if (!qrCode) {
             return res.status(400).json({ message: "QR code is required" });
@@ -132,6 +132,10 @@ router.post("/scan", async (req, res) => {
 
         if (!qrCodeDoc) {
             return res.status(404).json({ message: "Invalid qrcode", status: "Invalid" });
+        }
+
+        if (batchId && qrCodeDoc.batchId._id.toString() !== batchId.toString()) {
+            return res.status(400).json({ message: "QR code does not belong to this batch", status: "Invalid" });
         }
 
         const previousScanCount = qrCodeDoc.scanCount;
