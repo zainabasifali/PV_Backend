@@ -1,8 +1,12 @@
 const express = require("express");
 const router = express.Router();
+const mongoose = require("mongoose");
 const COA = require("../models/COA");
+const QRCodeModel = require("../models/QRCode");
 const { protect } = require("../middleware/authMiddleware");
 const upload = require("../middleware/uploadMiddleware");
+
+const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
 router.get("/", async (req, res) => {
     try {
@@ -15,6 +19,9 @@ router.get("/", async (req, res) => {
 
 router.get("/:id", async (req, res) => {
     try {
+        if (!isValidObjectId(req.params.id)) {
+            return res.status(400).json({ message: "Invalid COA ID format" });
+        }
         const coa = await COA.findById(req.params.id).populate("batchId");
         if (!coa) {
             return res.status(404).json({ message: "COA not found" });
@@ -28,7 +35,10 @@ router.get("/:id", async (req, res) => {
 router.post("/", protect, upload.single("file"), async (req, res) => {
     try {
         const { batchId, labName, purity } = req.body;
-        console.log("Received COA data:", { batchId, labName, purity });
+
+        if (!batchId || !isValidObjectId(batchId)) {
+            return res.status(400).json({ message: "Valid Batch ID is required" });
+        }
 
         if (!req.file) {
             return res.status(400).json({ message: "Please upload a COA file" });
@@ -51,6 +61,9 @@ router.post("/", protect, upload.single("file"), async (req, res) => {
 
 router.put("/:id", protect, upload.single("file"), async (req, res) => {
     try {
+        if (!isValidObjectId(req.params.id)) {
+            return res.status(400).json({ message: "Invalid COA ID format" });
+        }
         const coa = await COA.findById(req.params.id);
         if (!coa) {
             return res.status(404).json({ message: "COA not found" });
@@ -77,13 +90,20 @@ router.put("/:id", protect, upload.single("file"), async (req, res) => {
 
 router.delete("/:id", protect, async (req, res) => {
     try {
+        if (!isValidObjectId(req.params.id)) {
+            return res.status(400).json({ message: "Invalid COA ID format" });
+        }
+
         const coa = await COA.findById(req.params.id);
         if (!coa) {
             return res.status(404).json({ message: "COA not found" });
         }
 
+        // Cascade delete: QRCodes linking to this COA
+        await QRCodeModel.deleteMany({ coaId: req.params.id });
+
         await COA.findByIdAndDelete(req.params.id);
-        res.json({ message: "COA deleted successfully" });
+        res.json({ message: "COA and related QR codes deleted successfully" });
     } catch (error) {
         res.status(500).json({ message: "Server error", error: error.message });
     }

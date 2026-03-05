@@ -5,8 +5,8 @@ const Batch = require("../models/Batch");
 const COA = require("../models/COA");
 const { protect } = require("../middleware/authMiddleware");
 const { v4: uuidv4 } = require("uuid");
-const QRCode = require("qrcode"); 
-const { Transform } = require("json2csv"); 
+const QRCode = require("qrcode");
+const { Parser } = require("json2csv");
 
 router.get("/", protect, async (req, res) => {
     try {
@@ -21,6 +21,7 @@ router.get("/", protect, async (req, res) => {
 
 router.get("/:id", protect, async (req, res) => {
     try {
+        console.log(req.params.id);
         const qrCode = await QRCodeModel.findById(req.params.id)
             .populate("batchId productId coaId");
         if (!qrCode) {
@@ -49,8 +50,8 @@ router.post("/generate/:batchId", protect, async (req, res) => {
 
         const qrCodesArray = [];
         for (let i = 0; i < batch.quantity; i++) {
-            const uniqueCode = uuidv4(); 
-
+            // const uniqueCode = `BATCH-${batch._id}-QR-${uuidv4()}`;
+            const uniqueCode = uuidv4();
             qrCodesArray.push({
                 batchId: batch._id,
                 productId: batch.productId,
@@ -92,25 +93,57 @@ router.get("/export/:batchId", protect, async (req, res) => {
     try {
         const { batchId } = req.params;
 
-        res.setHeader("Content-Type", "text/csv");
-        res.setHeader(
+        const qrCodes = await QRCodeModel.find({ batchId });
+
+        if (qrCodes.length === 0) {
+            return res.status(404).json({ message: "No QR codes found for this batch" });
+        }
+
+        const csvData = qrCodes.map(q => ({ qrCode: q.qrCode }));
+
+        const parser = new Parser({ fields: ["qrCode"] });
+        const csv = parser.parse(csvData);
+
+        res.header("Content-Type", "text/csv");
+        res.header(
             "Content-Disposition",
             `attachment; filename="batch_${batchId}_qrcodes.csv"`
         );
+        res.send(csv);
 
-        const cursor = QRCodeModel.find({ batchId }).cursor();
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+});
 
-        const json2csv = new Transform({ fields: ["qrCode"] });
+router.post("/scan", async (req, res) => {
+    try {
+        const { qrCode } = req.body;
 
-        cursor.pipe(json2csv).pipe(res);
+        if (!qrCode) {
+            return res.status(400).json({ message: "QR code is required" });
+        }
 
-        cursor.on("end", () => {
-            console.log(`CSV streaming completed for batch ${batchId}`);
-        });
+        const qrCodeDoc = await QRCodeModel.findOne({ qrCode })
+            .populate("coaId")
+            .populate("productId")
+            .populate("batchId");
 
-        cursor.on("error", (err) => {
-            console.error("Cursor error:", err);
-            res.status(500).end("Server error during CSV export");
+        if (!qrCodeDoc) {
+            return res.status(404).json({ message: "invalid qrcode" });
+        }
+
+        qrCodeDoc.scanCount += 1;
+        qrCodeDoc.status = "used";
+        await qrCodeDoc.save();
+
+        res.json({
+            message: "QR code scanned successfully",
+            coaFile: qrCodeDoc.coaId ? qrCodeDoc.coaId.fileUrl : null,
+            product: qrCodeDoc.productId,
+            batch: qrCodeDoc.batchId,
+            scanCount: qrCodeDoc.scanCount
         });
 
     } catch (error) {
