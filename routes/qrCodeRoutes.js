@@ -147,7 +147,9 @@ router.post("/scan", async (req, res) => {
             status: verificationStatus,
             coaFile: qrCodeDoc.coaId ? qrCodeDoc.coaId.fileUrl : null,
             product: qrCodeDoc.productId,
-            scanCount: qrCodeDoc.scanCount
+            scanCount: qrCodeDoc.scanCount,
+            purity: qrCodeDoc.coaId ? qrCodeDoc.coaId.purity : null,
+            labName: qrCodeDoc.coaId ? qrCodeDoc.coaId.labName : null
         });
 
     } catch (error) {
