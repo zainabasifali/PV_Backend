@@ -39,7 +39,6 @@ router.get("/", protect, async (req, res) => {
 
 router.get("/:id", protect, async (req, res) => {
     try {
-        console.log(req.params.id);
         const qrCode = await QRCodeModel.findById(req.params.id)
             .populate("batchId productId coaId");
         if (!qrCode) {

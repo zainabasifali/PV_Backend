@@ -9,6 +9,6 @@ const qrCodeSchema = new mongoose.Schema({
   scanCount: { type: Number, default: 0 },
   activated: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now }
-});
+}, { timestamps: true });
 
 module.exports = mongoose.model("QRCode", qrCodeSchema);

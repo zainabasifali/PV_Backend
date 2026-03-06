@@ -26,6 +26,7 @@ router.get("/:id", async (req, res) => {
 
 router.post("/", protect, async (req, res) => {
     try {
+        console.log(req.body);
         const { name } = req.body;
         if (!name) {
             return res.status(400).json({ message: "Name is required" });
@@ -34,6 +35,9 @@ router.post("/", protect, async (req, res) => {
         const category = await Category.create({ name });
         res.status(201).json(category);
     } catch (error) {
+        if (error.code === 11000) {
+            return res.status(400).json({ message: "Category with this name already exists" });
+        }
         res.status(500).json({ message: "Server error", error: error.message });
     }
 });
@@ -56,12 +60,17 @@ router.put("/:id", protect, async (req, res) => {
 
 router.delete("/:id", protect, async (req, res) => {
     try {
-        const category = await Category.findById(req.params.id);
+        const categoryId = req.params.id;
+        const category = await Category.findById(categoryId);
         if (!category) {
             return res.status(404).json({ message: "Category not found" });
         }
-        await Category.findByIdAndDelete(req.params.id);
-        res.json({ message: "Category deleted successfully" });
+
+        const Product = require("../models/Product");
+        await Product.updateMany({ categoryId }, { $set: { categoryId: null } });
+
+        await Category.findByIdAndDelete(categoryId);
+        res.json({ message: "Category deleted and associated products unlinked successfully" });
     } catch (error) {
         res.status(500).json({ message: "Server error", error: error.message });
     }
