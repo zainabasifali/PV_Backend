@@ -10,10 +10,28 @@ const { Parser } = require("json2csv");
 
 router.get("/", protect, async (req, res) => {
     try {
-        const qrCodes = await QRCodeModel.find()
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        const { batchId, productId } = req.query;
+        let query = {};
+        if (batchId) query.batchId = batchId;
+        if (productId) query.productId = productId;
+
+        const totalCount = await QRCodeModel.countDocuments(query);
+        const qrCodes = await QRCodeModel.find(query)
             .populate("batchId productId coaId")
-            .sort({ createdAt: -1 });
-        res.json(qrCodes);
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        res.json({
+            qrCodes,
+            totalCount,
+            totalPages: Math.ceil(totalCount / limit),
+            currentPage: page
+        });
     } catch (error) {
         res.status(500).json({ message: "Server error", error: error.message });
     }
@@ -28,6 +46,31 @@ router.get("/:id", protect, async (req, res) => {
             return res.status(404).json({ message: "QR code not found" });
         }
         res.json(qrCode);
+    } catch (error) {
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+});
+
+router.get("/batch/:batchId", protect, async (req, res) => {
+    try {
+        const { batchId } = req.params;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        const totalCount = await QRCodeModel.countDocuments({ batchId });
+        const qrCodes = await QRCodeModel.find({ batchId })
+            .populate("batchId productId coaId")
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        res.json({
+            qrCodes,
+            totalCount,
+            totalPages: Math.ceil(totalCount / limit),
+            currentPage: page
+        });
     } catch (error) {
         res.status(500).json({ message: "Server error", error: error.message });
     }

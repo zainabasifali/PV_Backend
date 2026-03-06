@@ -23,7 +23,7 @@ router.get("/:id", protect, async (req, res) => {
     }
 });
 
-router.post("/", protect, async (req, res) => {
+router.post("/", async (req, res) => {
     try {
         const { name, email, phoneNumber, city } = req.body;
 
