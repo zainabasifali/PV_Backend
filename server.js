@@ -21,6 +21,7 @@ const batchRoutes = require("./routes/batchRoutes");
 const coaRoutes = require("./routes/coaRoutes");
 const qrCodeRoutes = require("./routes/qrCodeRoutes");
 const customerRoutes = require("./routes/customerRoutes");
+const categoryRoutes = require("./routes/categoryRoutes");
 
 app.use("/api/admin", adminRoutes);
 app.use("/api/products", productRoutes);
@@ -28,6 +29,7 @@ app.use("/api/batches", batchRoutes);
 app.use("/api/coa", coaRoutes);
 app.use("/api/qrcodes", qrCodeRoutes);
 app.use("/api/customers", customerRoutes);
+app.use("/api/categories", categoryRoutes);
 
 app.get("/", (req, res) => {
   res.send("Pharmacy API is running...");

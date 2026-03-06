@@ -12,7 +12,11 @@ const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
 router.get("/", async (req, res) => {
     try {
-        const products = await Product.find().sort({ createdAt: -1 });
+        const { categoryId } = req.query;
+        let query = {};
+        if (categoryId) query.categoryId = categoryId;
+
+        const products = await Product.find(query).populate("categoryId").sort({ createdAt: -1 });
         res.json(products);
     } catch (error) {
         res.status(500).json({ message: "Server error", error: error.message });
@@ -24,7 +28,7 @@ router.get("/:id", async (req, res) => {
         if (!isValidObjectId(req.params.id)) {
             return res.status(400).json({ message: "Invalid product ID format" });
         }
-        const product = await Product.findById(req.params.id);
+        const product = await Product.findById(req.params.id).populate("categoryId");
         if (!product) {
             return res.status(404).json({ message: "Product not found" });
         }
@@ -36,7 +40,7 @@ router.get("/:id", async (req, res) => {
 
 router.post("/", protect, upload.array("images", 5), async (req, res) => {
     try {
-        const { name, slug, description, storage, packaging } = req.body;
+        const { name, slug, description, storage, packaging, categoryId } = req.body;
         if (!name || !slug) {
             return res.status(400).json({ message: "Name and slug are required" });
         }
@@ -62,6 +66,7 @@ router.post("/", protect, upload.array("images", 5), async (req, res) => {
             storage,
             packaging,
             images,
+            categoryId
         });
 
         res.status(201).json(product);
@@ -104,7 +109,7 @@ router.put("/:id", protect, upload.array("images", 5), async (req, res) => {
             req.params.id,
             updateData,
             { new: true, runValidators: true }
-        );
+        ).populate("categoryId");
 
         res.json(updatedProduct);
     } catch (error) {
