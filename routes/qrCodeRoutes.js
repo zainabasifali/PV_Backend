@@ -63,7 +63,6 @@ router.get("/batch/:batchId", protect, async (req, res) => {
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit);
-
         res.json({
             qrCodes,
             totalCount,

@@ -115,35 +115,44 @@ router.get("/stats", protect, async (req, res) => {
             ...recentCOAs.map(c => ({ type: "coa", message: `COA uploaded for Batch #${c.batchId?.batchNumber || 'Batch'}`, time: c.uploadedAt }))
         ].sort((a, b) => b.time - a.time).slice(0, 10);
 
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        sevenDaysAgo.setHours(0, 0, 0, 0);
+        // Scan Activity (Last 30 days)
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        thirtyDaysAgo.setHours(0, 0, 0, 0);
 
         const scanActivityData = await QRCodeModel.aggregate([
             {
                 $match: {
-                    updatedAt: { $gte: sevenDaysAgo },
+                    updatedAt: { $gte: thirtyDaysAgo },
                     scanCount: { $gt: 0 }
                 }
             },
             {
                 $group: {
                     _id: { $dateToString: { format: "%Y-%m-%d", date: "$updatedAt" } },
-                    count: { $sum: 1 }
+                    total: { $sum: "$scanCount" }
                 }
             },
             { $sort: { _id: 1 } }
         ]);
 
-        const scanActivity = [];
-        const today = new Date();
-        for (let i = 6; i >= 0; i--) {
-            const date = new Date(today);
-            date.setDate(date.getDate() - i);
-            const dateStr = date.toISOString().split('T')[0];
-            const match = scanActivityData.find(d => d._id === dateStr);
-            scanActivity.push(match ? match.count : 0);
-        }
+        const generateActivityArray = (days) => {
+            const activity = [];
+            const today = new Date();
+            for (let i = days - 1; i >= 0; i--) {
+                const date = new Date(today);
+                date.setDate(date.getDate() - i);
+                const dateStr = date.toISOString().split('T')[0];
+                const match = scanActivityData.find(d => d._id === dateStr);
+                activity.push(match ? match.total : 0);
+            }
+            return activity;
+        };
+
+        const scanActivity = {
+            week: generateActivityArray(7),
+            month: generateActivityArray(30)
+        };
 
         res.json({
             totalProducts,

@@ -47,7 +47,7 @@ router.post("/", protect, upload.single("file"), async (req, res) => {
             return res.status(400).json({ message: "Lab name and purity are required" });
         }
 
-        const fileUrl = `/uploads/${req.file.filename}`;
+        const fileUrl = req.file.path;
 
         const coa = await COA.create({
             batchId,
@@ -75,7 +75,7 @@ router.put("/:id", protect, upload.single("file"), async (req, res) => {
         let updateData = { ...req.body };
 
         if (req.file) {
-            updateData.fileUrl = `/uploads/${req.file.filename}`;
+            updateData.fileUrl = req.file.path;
             updateData.version = (coa.version || 1) + 1;
         }
 

@@ -41,13 +41,13 @@ router.get("/:id", async (req, res) => {
 router.post("/", protect, upload.array("images", 5), async (req, res) => {
     try {
         const { name, slug, description, storage, packaging, categoryId } = req.body;
-        if (!name || !slug) {
-            return res.status(400).json({ message: "Name and slug are required" });
+        if (!name || !slug || !categoryId) {
+            return res.status(400).json({ message: "Name and slug and category are required" });
         }
 
         let images = [];
         if (req.files && req.files.length > 0) {
-            images = req.files.map(file => `/uploads/${file.filename}`);
+            images = req.files.map(file => file.path);
         }
 
         if (images.length === 0) {
@@ -101,7 +101,7 @@ router.put("/:id", protect, upload.array("images", 5), async (req, res) => {
         let updateData = { ...req.body };
 
         if (req.files && req.files.length > 0) {
-            const newImages = req.files.map(file => `/uploads/${file.filename}`);
+            const newImages = req.files.map(file => file.path);
             updateData.images = newImages;
         }
 
