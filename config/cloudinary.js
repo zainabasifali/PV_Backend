@@ -8,12 +8,13 @@ cloudinary.config({
 });
 
 const storage = new CloudinaryStorage({
-    cloudinary: cloudinary,
-    params: {
+    cloudinary,
+    params: async (req, file) => ({
         folder: "pharmacy_uploads",
         allowed_formats: ["jpg", "png", "jpeg", "webp", "pdf"],
-        resource_type: "auto",
-    },
+        resource_type: file.mimetype === "application/pdf" ? "raw" : "image", // ✅ crucial
+        public_id: Date.now() + "-" + file.originalname,
+    }),
 });
 
 module.exports = { cloudinary, storage };
