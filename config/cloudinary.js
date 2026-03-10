@@ -9,11 +9,13 @@ cloudinary.config({
 
 const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
-    params: {
-        folder: "pharmacy_uploads",
-        allowed_formats: ["jpg", "png", "jpeg", "webp", "pdf"],
-        // resource_type: "auto" is important to handle both images and PDFs
-        resource_type: "auto",
+    params: async (req, file) => {
+        return {
+            folder: "pharmacy_uploads",
+            allowed_formats: ["jpg", "png", "jpeg", "webp", "pdf"],
+            resource_type: file.mimetype === "application/pdf" ? "raw" : "image",
+            public_id: Date.now() + "-" + file.originalname,
+        };
     },
 });
 

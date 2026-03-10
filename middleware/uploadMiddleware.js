@@ -1,23 +1,18 @@
 const multer = require("multer");
-const path = require("path");
 const { storage } = require("../config/cloudinary");
 
-// File filter (images and PDFs)
+// Correct file filter
 const fileFilter = (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|webp|pdf/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
+    const allowedImageTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    const allowedPdfType = "application/pdf";
 
-    if (extname && mimetype) {
-        return cb(null, true);
+    if (allowedImageTypes.includes(file.mimetype) || file.mimetype === allowedPdfType) {
+        cb(null, true);
     } else {
         cb(new Error("Only images (jpeg, jpg, png, webp) and PDF files are allowed"));
     }
 };
 
-const upload = multer({
-    storage: storage,
-    fileFilter: fileFilter,
-});
+const upload = multer({ storage, fileFilter });
 
 module.exports = upload;
