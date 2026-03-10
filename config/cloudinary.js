@@ -14,7 +14,7 @@ const storage = new CloudinaryStorage({
         return {
             folder: "pharmacy_uploads",
             allowed_formats: ["jpg", "png", "jpeg", "webp", "pdf"],
-            resource_type: isPdf ? "image" : "image",
+            resource_type: isPdf ? "raw" : "image",
             public_id: Date.now() + "-" + file.originalname,
         };
     },
