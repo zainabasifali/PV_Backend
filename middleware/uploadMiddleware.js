@@ -1,7 +1,6 @@
 const multer = require("multer");
 const { storage } = require("../config/cloudinary");
 
-// Correct file filter
 const fileFilter = (req, file, cb) => {
     const allowedImageTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
     const allowedPdfType = "application/pdf";
