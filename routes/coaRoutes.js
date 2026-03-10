@@ -35,7 +35,6 @@ router.get("/:id", async (req, res) => {
 router.post("/", protect, (req, res) => {
     upload.single("file")(req, res, async (err) => {
         try {
-            // Multer file size error
             if (err) {
                 if (err.code === "LIMIT_FILE_SIZE") {
                     return res.status(400).json({ message: "File is too large. Max size is 100MB" });
