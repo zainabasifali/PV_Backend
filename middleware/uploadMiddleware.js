@@ -2,16 +2,20 @@ const multer = require("multer");
 const { storage } = require("../config/cloudinary");
 
 const fileFilter = (req, file, cb) => {
-    const allowedImageTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
-    const allowedPdfTypes = ["application/pdf", "application/x-pdf"];
+    const allowedImages = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    const allowedPdfs = ["application/pdf", "application/x-pdf"];
 
-    if (allowedImageTypes.includes(file.mimetype.toLowerCase()) || allowedPdfTypes.includes(file.mimetype.toLowerCase())) {
+    if (allowedImages.includes(file.mimetype.toLowerCase()) || allowedPdfs.includes(file.mimetype.toLowerCase())) {
         cb(null, true);
     } else {
-        cb(new Error("Only images (jpeg, jpg, png, webp) and PDF files are allowed"));
+        cb(new Error("Only images (jpeg, jpg, png, webp) and PDFs are allowed"));
     }
 };
 
-const upload = multer({ storage, fileFilter });
+const upload = multer({
+    storage,
+    fileFilter,
+    limits: { fileSize: 100 * 1024 * 1024 },
+});
 
 module.exports = upload;
