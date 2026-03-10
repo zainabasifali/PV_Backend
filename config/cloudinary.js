@@ -9,12 +9,15 @@ cloudinary.config({
 
 const storage = new CloudinaryStorage({
     cloudinary,
-    params: async (req, file) => ({
-        folder: "pharmacy_uploads",
-        allowed_formats: ["jpg", "png", "jpeg", "webp", "pdf"],
-        resource_type: file.mimetype === "application/pdf" ? "raw" : "image", // ✅ crucial
-        public_id: Date.now() + "-" + file.originalname,
-    }),
+    params: async (req, file) => {
+        const isPdf = ["application/pdf", "application/x-pdf"].includes(file.mimetype.toLowerCase());
+        return {
+            folder: "pharmacy_uploads",
+            allowed_formats: ["jpg", "png", "jpeg", "webp", "pdf"],
+            resource_type: isPdf ? "raw" : "image",
+            public_id: Date.now() + "-" + file.originalname,
+        };
+    },
 });
 
 module.exports = { cloudinary, storage };
