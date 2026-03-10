@@ -5,26 +5,18 @@ const COA = require("../models/COA");
 const QRCodeModel = require("../models/QRCode");
 const { protect } = require("../middleware/authMiddleware");
 const upload = require("../middleware/uploadMiddleware");
-const { getSignedUrl } = require("../helpers/cloudinaryHelper");
 
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
-// Get all COAs
 router.get("/", async (req, res) => {
     try {
         const coas = await COA.find().populate("batchId").sort({ uploadedAt: -1 });
-        // Add signed URLs for PDFs dynamically
-        const coasWithUrls = coas.map(c => ({
-            ...c._doc,
-            signedFileUrl: getSignedUrl(c.fileUrl)
-        }));
-        res.json(coasWithUrls);
+        res.json(coas);
     } catch (error) {
         res.status(500).json({ message: "Server error", error: error.message });
     }
 });
 
-// Get single COA
 router.get("/:id", async (req, res) => {
     try {
         if (!isValidObjectId(req.params.id)) {
@@ -34,13 +26,12 @@ router.get("/:id", async (req, res) => {
         if (!coa) {
             return res.status(404).json({ message: "COA not found" });
         }
-        res.json({ ...coa._doc, signedFileUrl: getSignedUrl(coa.fileUrl) });
+        res.json(coa);
     } catch (error) {
         res.status(500).json({ message: "Server error", error: error.message });
     }
 });
 
-// Upload COA
 router.post("/", protect, (req, res) => {
     upload.single("file")(req, res, async (err) => {
         try {
@@ -72,18 +63,22 @@ router.post("/", protect, (req, res) => {
                 purity,
             });
 
-            res.status(201).json({ ...coa._doc, signedFileUrl: getSignedUrl(fileUrl) });
+            res.status(201).json(coa);
         } catch (error) {
             res.status(500).json({ message: "Server error", error: error.message });
         }
     });
 });
 
-// Update COA
 router.put("/:id", protect, (req, res) => {
     upload.single("file")(req, res, async (err) => {
         try {
-            if (err) return res.status(400).json({ message: err.message });
+            if (err) {
+                if (err.code === "LIMIT_FILE_SIZE") {
+                    return res.status(400).json({ message: "File is too large. Max size is 100MB" });
+                }
+                return res.status(400).json({ message: err.message });
+            }
 
             if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
                 return res.status(400).json({ message: "Invalid COA ID format" });
@@ -104,14 +99,13 @@ router.put("/:id", protect, (req, res) => {
                 runValidators: true,
             });
 
-            res.json({ ...updatedCOA._doc, signedFileUrl: getSignedUrl(updatedCOA.fileUrl) });
+            res.json(updatedCOA);
         } catch (error) {
             res.status(500).json({ message: "Server error", error: error.message });
         }
     });
 });
 
-// Delete COA
 router.delete("/:id", protect, async (req, res) => {
     try {
         if (!isValidObjectId(req.params.id)) {
