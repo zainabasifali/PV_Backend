@@ -61,6 +61,30 @@ router.get("/:id", protect, async (req, res) => {
     }
 });
 
+router.get("/batch/:batchId", protect, async (req, res) => {
+    try {
+        const { batchId } = req.params;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        const totalCount = await QRCodeModel.countDocuments({ batchId });
+        const qrCodes = await QRCodeModel.find({ batchId })
+            .populate("batchId productId coaId")
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+        res.json({
+            qrCodes,
+            totalCount,
+            totalPages: Math.ceil(totalCount / limit),
+            currentPage: page
+        });
+    } catch (error) {
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+});
+
 // Generate QR codes for batch
 router.post("/generate/:batchId", protect, async (req, res) => {
     try {
@@ -139,5 +163,49 @@ router.post("/scan", async (req, res) => {
         res.status(500).json({ message: "Server error", error: error.message });
     }
 });
+
+router.get("/export/:batchId", protect, async (req, res) => {
+    try {
+        const { batchId } = req.params;
+
+        const qrCodes = await QRCodeModel.find({ batchId });
+
+        if (qrCodes.length === 0) {
+            return res.status(404).json({ message: "No QR codes found for this batch" });
+        }
+
+        const csvData = qrCodes.map(q => ({ qrCode: q.qrCode }));
+
+        const parser = new Parser({ fields: ["qrCode"] });
+        const csv = parser.parse(csvData);
+
+        res.header("Content-Type", "text/csv");
+        res.header(
+            "Content-Disposition",
+            `attachment; filename="batch_${batchId}_qrcodes.csv"`
+        );
+        res.send(csv);
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+});
+
+router.delete("/:id", protect, async (req, res) => {
+    try {
+        const qrCode = await QRCodeModel.findById(req.params.id);
+        if (!qrCode) {
+            return res.status(404).json({ message: "QR code not found" });
+        }
+
+        await QRCodeModel.findByIdAndDelete(req.params.id);
+        res.json({ message: "QR code deleted successfully" });
+    } catch (error) {
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+});
+
+
 
 module.exports = router;
