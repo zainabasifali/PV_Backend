@@ -7,7 +7,9 @@ const { protect } = require("../middleware/authMiddleware");
 const { v4: uuidv4 } = require("uuid");
 const QRCode = require("qrcode");
 const { Parser } = require("json2csv");
+const { getSignedUrl } = require("../helpers/cloudinaryHelper"); // <-- added
 
+// Pagination & listing
 router.get("/", protect, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -26,8 +28,14 @@ router.get("/", protect, async (req, res) => {
             .skip(skip)
             .limit(limit);
 
+        // Add signed URLs for PDFs dynamically
+        const qrCodesWithUrls = qrCodes.map(q => ({
+            ...q._doc,
+            signedCoaFile: q.coaId ? getSignedUrl(q.coaId.fileUrl) : null
+        }));
+
         res.json({
-            qrCodes,
+            qrCodes: qrCodesWithUrls,
             totalCount,
             totalPages: Math.ceil(totalCount / limit),
             currentPage: page
@@ -37,47 +45,26 @@ router.get("/", protect, async (req, res) => {
     }
 });
 
+// Get single QR code
 router.get("/:id", protect, async (req, res) => {
     try {
         const qrCode = await QRCodeModel.findById(req.params.id)
             .populate("batchId productId coaId");
-        if (!qrCode) {
-            return res.status(404).json({ message: "QR code not found" });
-        }
-        res.json(qrCode);
-    } catch (error) {
-        res.status(500).json({ message: "Server error", error: error.message });
-    }
-});
+        if (!qrCode) return res.status(404).json({ message: "QR code not found" });
 
-router.get("/batch/:batchId", protect, async (req, res) => {
-    try {
-        const { batchId } = req.params;
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
-        const skip = (page - 1) * limit;
-
-        const totalCount = await QRCodeModel.countDocuments({ batchId });
-        const qrCodes = await QRCodeModel.find({ batchId })
-            .populate("batchId productId coaId")
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit);
         res.json({
-            qrCodes,
-            totalCount,
-            totalPages: Math.ceil(totalCount / limit),
-            currentPage: page
+            ...qrCode._doc,
+            signedCoaFile: qrCode.coaId ? getSignedUrl(qrCode.coaId.fileUrl) : null
         });
     } catch (error) {
         res.status(500).json({ message: "Server error", error: error.message });
     }
 });
 
+// Generate QR codes for batch
 router.post("/generate/:batchId", protect, async (req, res) => {
     try {
         const { batchId } = req.params;
-
         const batch = await Batch.findById(batchId);
         if (!batch) return res.status(404).json({ message: "Batch not found" });
 
@@ -85,13 +72,10 @@ router.post("/generate/:batchId", protect, async (req, res) => {
         if (!coa) return res.status(400).json({ message: "Upload COA before generating QR codes" });
 
         const existing = await QRCodeModel.find({ batchId: batch._id });
-        if (existing.length > 0) {
-            return res.status(400).json({ message: "QR codes already generated for this batch" });
-        }
+        if (existing.length > 0) return res.status(400).json({ message: "QR codes already generated for this batch" });
 
         const qrCodesArray = [];
         for (let i = 0; i < batch.quantity; i++) {
-            // const uniqueCode = `BATCH-${batch._id}-QR-${uuidv4()}`;
             const uniqueCode = uuidv4();
             qrCodesArray.push({
                 batchId: batch._id,
@@ -116,64 +100,18 @@ router.post("/generate/:batchId", protect, async (req, res) => {
     }
 });
 
-router.delete("/:id", protect, async (req, res) => {
-    try {
-        const qrCode = await QRCodeModel.findById(req.params.id);
-        if (!qrCode) {
-            return res.status(404).json({ message: "QR code not found" });
-        }
-
-        await QRCodeModel.findByIdAndDelete(req.params.id);
-        res.json({ message: "QR code deleted successfully" });
-    } catch (error) {
-        res.status(500).json({ message: "Server error", error: error.message });
-    }
-});
-
-router.get("/export/:batchId", protect, async (req, res) => {
-    try {
-        const { batchId } = req.params;
-
-        const qrCodes = await QRCodeModel.find({ batchId });
-
-        if (qrCodes.length === 0) {
-            return res.status(404).json({ message: "No QR codes found for this batch" });
-        }
-
-        const csvData = qrCodes.map(q => ({ qrCode: q.qrCode }));
-
-        const parser = new Parser({ fields: ["qrCode"] });
-        const csv = parser.parse(csvData);
-
-        res.header("Content-Type", "text/csv");
-        res.header(
-            "Content-Disposition",
-            `attachment; filename="batch_${batchId}_qrcodes.csv"`
-        );
-        res.send(csv);
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Server error", error: error.message });
-    }
-});
-
+// Scan QR code
 router.post("/scan", async (req, res) => {
     try {
         const { qrCode } = req.body;
-
-        if (!qrCode) {
-            return res.status(400).json({ message: "QR code is required" });
-        }
+        if (!qrCode) return res.status(400).json({ message: "QR code is required" });
 
         const qrCodeDoc = await QRCodeModel.findOne({ qrCode })
             .populate("coaId")
             .populate("productId")
             .populate("batchId");
 
-        if (!qrCodeDoc) {
-            return res.status(404).json({ message: "Invalid qrcode", status: "Invalid" });
-        }
+        if (!qrCodeDoc) return res.status(404).json({ message: "Invalid QR code", status: "Invalid" });
 
         const previousScanCount = qrCodeDoc.scanCount;
 
@@ -183,10 +121,13 @@ router.post("/scan", async (req, res) => {
 
         const verificationStatus = previousScanCount === 0 ? "Verified" : "Already verified";
 
+        // Use signed URL for authenticated PDF
+        const signedCoaFile = qrCodeDoc.coaId ? getSignedUrl(qrCodeDoc.coaId.fileUrl) : null;
+
         res.json({
             message: "QR code scanned successfully",
             status: verificationStatus,
-            coaFile: qrCodeDoc.coaId ? qrCodeDoc.coaId.fileUrl : null,
+            coaFile: signedCoaFile, // <-- signed URL for iframe / download
             product: qrCodeDoc.productId,
             scanCount: qrCodeDoc.scanCount,
             purity: qrCodeDoc.coaId ? qrCodeDoc.coaId.purity : null,
