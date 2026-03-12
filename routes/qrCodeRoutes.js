@@ -9,7 +9,6 @@ const QRCode = require("qrcode");
 const { Parser } = require("json2csv");
 const { getSignedUrl } = require("../helpers/cloudinaryHelper"); // <-- added
 
-// Pagination & listing
 router.get("/", protect, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -28,7 +27,6 @@ router.get("/", protect, async (req, res) => {
             .skip(skip)
             .limit(limit);
 
-        // Add signed URLs for PDFs dynamically
         const qrCodesWithUrls = qrCodes.map(q => ({
             ...q._doc,
             signedCoaFile: q.coaId ? getSignedUrl(q.coaId.fileUrl) : null
@@ -45,7 +43,6 @@ router.get("/", protect, async (req, res) => {
     }
 });
 
-// Get single QR code
 router.get("/:id", protect, async (req, res) => {
     try {
         const qrCode = await QRCodeModel.findById(req.params.id)
@@ -85,7 +82,6 @@ router.get("/batch/:batchId", protect, async (req, res) => {
     }
 });
 
-// Generate QR codes for batch
 router.post("/generate/:batchId", protect, async (req, res) => {
     try {
         const { batchId } = req.params;
@@ -124,7 +120,6 @@ router.post("/generate/:batchId", protect, async (req, res) => {
     }
 });
 
-// Scan QR code
 router.post("/scan", async (req, res) => {
     try {
         const { qrCode } = req.body;
@@ -145,13 +140,12 @@ router.post("/scan", async (req, res) => {
 
         const verificationStatus = previousScanCount === 0 ? "Verified" : "Already verified";
 
-        // Use signed URL for authenticated PDF
         const signedCoaFile = qrCodeDoc.coaId ? getSignedUrl(qrCodeDoc.coaId.fileUrl) : null;
 
         res.json({
             message: "QR code scanned successfully",
             status: verificationStatus,
-            coaFile: signedCoaFile, // <-- signed URL for iframe / download
+            coaFile: signedCoaFile, 
             product: qrCodeDoc.productId,
             scanCount: qrCodeDoc.scanCount,
             purity: qrCodeDoc.coaId ? qrCodeDoc.coaId.purity : null,

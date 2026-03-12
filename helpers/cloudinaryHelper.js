@@ -3,8 +3,6 @@ const cloudinary = require("cloudinary").v2;
 const getSignedUrl = (fileUrl, expiresIn = 3600) => {
     if (!fileUrl) return null;
 
-    // Extract public_id from the fileUrl
-    // Example: https://res.cloudinary.com/dbktduaay/raw/upload/v1773135478/pharmacy_uploads/filename.pdf
     const url = new URL(fileUrl);
     const pathParts = url.pathname.split('/'); // ['', 'raw', 'upload', 'v1773...', 'pharmacy_uploads/filename.pdf']
     const versionIndex = pathParts.findIndex(p => p.startsWith('v'));
